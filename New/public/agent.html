@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Screen</title>
+</head>
+<body>
+  <button id="generateBtn">Generate Unique URL</button>
+  <div id="url"></div>
+  <div id="customerScreenContainer"></div>
+  <button id="controlBtn">Request Control</button>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const generateBtn = document.getElementById('generateBtn');
+    const urlDiv = document.getElementById('url');
+    const customerScreenContainer = document.getElementById('customerScreenContainer');
+    let streamStarted = false;
+
+    generateBtn.addEventListener('click', () => {
+      socket.emit('generateLink');
+    });
+
+    socket.on('linkGenerated', (sessionId) => {
+      const url = `${window.location.origin}/customer.html?sessionId=${sessionId}`;
+      urlDiv.innerHTML = `Share this URL with the customer: <a href="${url}" target="_blank">${url}</a>`;
+    });
+
+    socket.on('streamStarted', () => {
+      streamStarted = true;
+    });
+
+    socket.on('streamEnded', () => {
+      streamStarted = false;
+    });
+
+    socket.on('addStreamTrack', (track) => {
+      if (streamStarted) {
+        const video = document.createElement('video');
+        video.autoplay = true;
+        video.srcObject = new MediaStream([track]);
+        customerScreenContainer.appendChild(video);
+      }
+    });
+
+    socket.on('screen', (dataURL) => {
+      // Display the live stream of the customer's screen
+      const img = document.createElement('img');
+      img.src = dataURL;
+      customerScreenContainer.innerHTML = ''; // Clear previous screens
+      customerScreenContainer.appendChild(img);
+    });
+
+    const controlBtn = document.getElementById('controlBtn');
+
+    controlBtn.addEventListener('click', () => {
+      socket.emit('controlRequest');
+    });
+
+    socket.on('controlAccepted', () => {
+      alert('You now have control of the customer screen.');
+    });
+  </script>
+</body>
+</html>

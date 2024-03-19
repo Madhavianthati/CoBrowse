@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Screen</title>
+</head>
+<body>
+  <h1>Customer Screen</h1>
+  <div id="customerScreenContainer"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const customerScreenContainer = document.getElementById('customerScreenContainer');
+
+    navigator.mediaDevices.getDisplayMedia({ video: true })
+      .then(stream => {
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.autoplay = true;
+        document.body.appendChild(video);
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        video.addEventListener('play', () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          setInterval(() => {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            socket.emit('screen', canvas.toDataURL());
+          }, 100);
+        });
+      })
+      .catch(error => {
+        console.error('Error accessing screen:', error);
+      });
+
+    socket.on('screen', (dataURL) => {
+      const img = document.createElement('img');
+      img.src = dataURL;
+      customerScreenContainer.innerHTML = ''; // Clear previous screens
+      customerScreenContainer.appendChild(img);
+    });
+
+    socket.on('controlRequest', () => {
+      if (confirm('Agent is requesting control. Do you accept?')) {
+        socket.emit('controlAccepted');
+      }
+    });
+  </script>
+</body>
+</html>
